@@ -7,6 +7,7 @@ from os.path import expanduser
 import shlex
 import subprocess
 import time
+import json
 
 context = pyudev.Context()
 monitor = pyudev.Monitor.from_netlink(context)
@@ -18,16 +19,25 @@ def uniq_keyboard(device):
 def isotime():
 	return datetime.now(tzlocal()).strftime("%F %T %Z")
 
-def get_xkbmap():
-	filename = expanduser("~/.Xkbmap")
+def get_config():
+	filename = expanduser("~/.wtfbrain.json")
 	with open(filename) as f:
-		lines = f.read()
-		xkbmap = shlex.split(lines)
-	return xkbmap
+		config = json.load(f)
+	return config
+
+def notify(summary, body, timeout):
+	args = [
+		'notify-send', summary, body,
+		'-t', str(timeout * 1000),
+	]
+	subprocess.check_call(args)
 
 def set_xkbmap(xkbmap):
 	try:
-		args = ['setxkbmap'] + xkbmap
+		args = ['setxkbmap']
+		for k, v in xkbmap.items():
+			args.append("-" + k)
+			args.append(v)
 		cmd = ' '.join(shlex.quote(x) for x in args)
 		print(cmd)
 		subprocess.check_call(args)
@@ -37,8 +47,9 @@ def set_xkbmap(xkbmap):
 		print('command failed: ' + cmd)
 		return False
 
-def set_rate(first_delay=200, delay=30):
+def set_rate(rate):
 	try:
+		first_delay, delay = rate
 		args = [
 			'xset', 'r', 'rate',
 			str(first_delay),
@@ -53,15 +64,38 @@ def set_rate(first_delay=200, delay=30):
 		print('command failed: ' + cmd)
 		return False
 
-xkbmap = get_xkbmap()
-for action, device in monitor:
-	if action == 'add' and uniq_keyboard(device):
-		print("[{0}] {1}:{2} {3}'".format(
-			isotime(),
-			device.get('ID_VENDOR', 'no-vendor'),
-			device.get('ID_MODEL', 'no-model'),
-			device.sys_path,
-		))
-		time.sleep(2)
-		set_rate(200, 30)
-		set_xkbmap(xkbmap)
+def main():
+	config = get_config()
+
+	set_rate(config['rate'])
+	set_xkbmap(config['xkbmap'])
+
+	while True:
+		try:
+			for action, device in monitor:
+				if action == 'add' and uniq_keyboard(device):
+					notify(
+						'A keyboard attached',
+						'{0}:{1}'.format(
+							device.get('ID_VENDOR', 'no-vendor'),
+							device.get('ID_MODEL', 'no-model'),
+						) + '\nReconfiguring xkbmap and rate',
+						2,
+					)
+					print("[{0}] {1}:{2} {3}'".format(
+						isotime(),
+						device.get('ID_VENDOR', 'no-vendor'),
+						device.get('ID_MODEL', 'no-model'),
+						device.sys_path,
+					))
+					time.sleep(2)
+					set_rate(config['rate'])
+					set_xkbmap(config['xkbmap'])
+		except KeyboardInterrupt:
+			print("dying")
+			return
+		except:
+			print("recovering from interruption")
+
+if __name__ == '__main__':
+	main()
