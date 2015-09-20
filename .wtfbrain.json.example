@@ -1,0 +1,7 @@
+{
+	"xkbmap": {
+		"layout": "us,ru",
+		"option": "grp:caps_toggle,compose:ralt"
+	},
+	"rate": [200, 30]
+}
