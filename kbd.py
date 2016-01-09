@@ -9,23 +9,29 @@
 # ----------------------------------------------------------------------------
 
 import pyudev
-from datetime import datetime
-from dateutil.tz import tzlocal
-from os.path import expanduser
 import shlex
 import subprocess
 import time
 import json
 
+from datetime import datetime
+from dateutil.tz import tzlocal
+from os.path import expanduser
+
+
 context = pyudev.Context()
 monitor = pyudev.Monitor.from_netlink(context)
 monitor.filter_by(subsystem='input')
+monitor.filter_by(subsystem='block')
+
 
 def uniq_keyboard(device):
 	return device.get('ID_INPUT_KEYBOARD') == '1' and device.get('UNIQ') == '""'
 
+
 def isotime():
 	return datetime.now(tzlocal()).strftime("%F %T %Z")
+
 
 def get_config():
 	filename = expanduser("~/.wtfbrain.json")
@@ -33,12 +39,26 @@ def get_config():
 		config = json.load(f)
 	return config
 
+
 def notify(summary, body, timeout):
 	args = [
 		'notify-send', summary, body,
 		'-t', str(timeout * 1000),
 	]
 	subprocess.check_call(args)
+
+
+def is_usb(device):
+	return device.device_type == 'partition' and device['ID_BUS'].upper() == 'USB'
+
+
+def mount(block):
+	args = [
+		'udisksctl', 'mount', '--block-device',
+		block, '--no-user-interaction'
+	]
+	subprocess.check_call(args)
+
 
 def set_xkbmap(xkbmap):
 	try:
@@ -54,6 +74,7 @@ def set_xkbmap(xkbmap):
 	except subprocess.CalledProcessError:
 		print('command failed: ' + cmd)
 		return False
+
 
 def set_rate(rate):
 	try:
@@ -71,6 +92,7 @@ def set_rate(rate):
 	except subprocess.CalledProcessError:
 		print('command failed: ' + cmd)
 		return False
+
 
 def main():
 	config = get_config()
@@ -99,11 +121,15 @@ def main():
 					time.sleep(2)
 					set_rate(config['rate'])
 					set_xkbmap(config['xkbmap'])
+
+				if action == 'add' and is_usb(device):
+					mount(device.device_node)
 		except KeyboardInterrupt:
 			print("dying")
 			return
 		except:
-			print("recovering from interruption")
+			print("Recovering from interruption")
+
 
 if __name__ == '__main__':
 	main()
