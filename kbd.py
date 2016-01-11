@@ -1,12 +1,14 @@
 #!/usr/bin/python3
 
-# ----------------------------------------------------------------------------
-# Constantin S. Pan <kvapen@gmail.com> wrote this file. As long as you retain
-# this notice you can do whatever you want with this stuff. If we meet some
-# day, and you think this stuff is worth it, you can buy me a can of Coke in
-# return.
-# 	Constantin S. Pan
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# We wrote this file. As long as you retain this notice you can do whatever you
+# want with this stuff. If we meet some day, and you think this stuff is worth
+# it, you can buy us a bottle of cider in return.
+#
+#	Constantin S. Pan <kvapen@gmail.com>
+#	Ildus Kurbangaliev <i.kurbangaliev@gmail.com>
+#	2016
+# -----------------------------------------------------------------------------
 
 import pyudev
 import shlex
