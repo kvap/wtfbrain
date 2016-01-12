@@ -48,8 +48,15 @@ def notify(summary, body, timeout):
 	subprocess.check_call(args)
 
 
-def is_usb(device):
-	return device.device_type == 'partition' and device['ID_BUS'].upper() == 'USB'
+def get_mount_source(device):
+	if device.get('ID_BUS').upper() == 'USB':
+		# standart flash drives
+		if device.device_type == 'partition':
+			return device.device_path
+
+		# flash players
+		if device.device_type == 'disk' and device.get('ID_FS_TYPE'):
+			return device['DEVLINKS'].split()[0]
 
 
 def mount(block):
@@ -122,8 +129,11 @@ def main():
 					set_rate(config['rate'])
 					set_xkbmap(config['xkbmap'])
 
-				if action == 'add' and is_usb(device):
-					mount(device.device_node)
+				if action == 'add' and device.subsystem == 'block':
+					mount_source = get_mount_source(device)
+					if mount_source:
+						mount(mount_source)
+
 		except KeyboardInterrupt:
 			print("dying")
 			return
