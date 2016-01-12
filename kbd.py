@@ -52,7 +52,7 @@ def notify(summary, body, timeout):
 
 def get_mount_source(device):
 	if device.get('ID_BUS').upper() == 'USB':
-		# standart flash drives
+		# standard flash drives
 		if device.device_type == 'partition':
 			return device.device_path
 
