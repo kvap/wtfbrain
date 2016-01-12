@@ -50,24 +50,26 @@ def notify(summary, body, timeout):
 	subprocess.check_call(args)
 
 
-def get_mount_source(device):
-	if device.get('ID_BUS').upper() == 'USB':
-		# standard flash drives
-		if device.device_type == 'partition':
-			return device.device_path
-
-		# flash players
-		if device.device_type == 'disk' and device.get('ID_FS_TYPE'):
-			return device['DEVLINKS'].split()[0]
-
+def get_fs_info(device):
+	if device.get('ID_FS_USAGE') == 'filesystem':
+		label = device.get('ID_FS_LABEL', 'unlabeled')
+		fs = device.get('ID_FS_TYPE')
+		devname = device.get('DEVNAME')
+		return (label, fs, devname)
 
 def mount(block):
-	args = [
-		'udisksctl', 'mount', '--block-device',
-		block, '--no-user-interaction'
-	]
-	subprocess.check_call(args)
-
+	try:
+		args = [
+			'udisksctl', 'mount', '--block-device',
+			block, '--no-user-interaction'
+		]
+		cmd = ' '.join(shlex.quote(x) for x in args)
+		print(cmd)
+		subprocess.check_call(args)
+		return True
+	except subprocess.CalledProcessError:
+		print('command failed: ' + cmd)
+		return False
 
 def set_xkbmap(xkbmap):
 	try:
@@ -132,9 +134,22 @@ def main():
 					set_xkbmap(config['xkbmap'])
 
 				if action == 'add' and device.subsystem == 'block':
-					mount_source = get_mount_source(device)
-					if mount_source:
-						mount(mount_source)
+					fsinfo = get_fs_info(device)
+					if fsinfo:
+						(label, fs, devname) = fsinfo
+						notify(
+							'A filesystem attached',
+							'{0} ({1}) at {2}'.format(label, fs, devname)
+							+ '\nMounting',
+							2,
+						)
+						print("[{0}] {1}:{2} at {3}'".format(
+							isotime(),
+							device.get('ID_VENDOR', 'no-vendor'),
+							device.get('ID_MODEL', 'no-model'),
+							device.get('DEVPATH'),
+						))
+						mount(devname)
 
 		except KeyboardInterrupt:
 			print("dying")
