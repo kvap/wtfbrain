@@ -46,11 +46,12 @@ def get_config():
 
 
 def notify(summary, body, timeout):
-	args = [
-		'notify-send', summary, body,
-		'-t', str(timeout * 1000),
-	]
-	subprocess.check_call(args)
+	if timeout > 0:
+		args = [
+			'notify-send', summary, body,
+			'-t', str(int(timeout * 1000)),
+		]
+		subprocess.check_call(args)
 
 
 def get_fs_info(device):
@@ -138,10 +139,10 @@ def rerandr(display):
 
 			set_randr(outputs, cfg)
 
-			return True
+			return True, name
 
 	print("no display mode matched signature %s" % signature)
-	return False
+	return False, signature
 
 def main():
 	config = get_config()
@@ -166,7 +167,7 @@ def main():
 							device.get('ID_VENDOR', 'no-vendor'),
 							device.get('ID_MODEL', 'no-model'),
 						) + '\nReconfiguring xkbmap and rate',
-						2,
+						config.get('notification', 0),
 					)
 					print("[{0}] {1}:{2} {3}'".format(
 						isotime(),
@@ -187,7 +188,7 @@ def main():
 							'A filesystem attached',
 							'{0} ({1}) at {2}'.format(label, fs, devname)
 							+ '\nMounting',
-							2,
+							config.get('notification', 0),
 						)
 						print("[{0}] {1}:{2} at {3}'".format(
 							isotime(),
@@ -199,7 +200,20 @@ def main():
 
 				if action == 'change' and device.subsystem == 'drm':
 					if display:
-						rerandr(display)
+						time.sleep(2)
+						ok, mode = rerandr(display)
+						if ok:
+							notify(
+								'display configuration restored',
+								mode,
+								config.get('notification', 0),
+							)
+						else:
+							notify(
+								'Unknown display configuration',
+								mode,
+								config.get('notification', 0),
+							)
 
 		except KeyboardInterrupt:
 			print("dying")

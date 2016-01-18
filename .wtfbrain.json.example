@@ -14,5 +14,6 @@
 		"standalone": {
 			"LVDS1=LP125WH2-SLB1": "--preferred"
 		}
-	}
+	},
+	"notification": 5
 }
