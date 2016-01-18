@@ -12,7 +12,7 @@ These daemons will wait for new devices attached and set different things for th
 
 ## configuration
   1. Copy `.wftbrain.json.example` into `~/.wtfbrain.json`.
-	1. Launch `randr.py` to see the list of your currently attached monitors with their signatures.
+  1. Launch `randr.py` to see the list of your currently attached monitors with their signatures.
   1. Change the settings as you wish.
 
 ## running
