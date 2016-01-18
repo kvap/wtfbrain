@@ -1,7 +1,18 @@
 {
-	"xkbmap": {
-		"layout": "us,ru",
-		"option": "grp:caps_toggle,compose:ralt"
+	"keyboard": {
+		"xkbmap": {
+			"layout": "us,ru",
+			"option": "grp:caps_toggle,compose:ralt"
+		},
+		"rate": [200, 30]
 	},
-	"rate": [200, 30]
+	"display": {
+		"ppg office": {
+			"LVDS1=LP125WH2-SLB1": "--off",
+			"DP2=DELL-UZ2715H:MTFYD4730GES": "--preferred"
+		},
+		"standalone": {
+			"LVDS1=LP125WH2-SLB1": "--preferred"
+		}
+	}
 }

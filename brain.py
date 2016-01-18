@@ -16,6 +16,8 @@ import subprocess
 import time
 import json
 
+import randr
+
 from datetime import datetime
 from dateutil.tz import tzlocal
 from os.path import expanduser
@@ -25,6 +27,7 @@ context = pyudev.Context()
 monitor = pyudev.Monitor.from_netlink(context)
 monitor.filter_by(subsystem='input')
 monitor.filter_by(subsystem='block')
+monitor.filter_by(subsystem='drm')
 
 
 def uniq_keyboard(device):
@@ -104,12 +107,54 @@ def set_rate(rate):
 		print('command failed: ' + cmd)
 		return False
 
+def set_randr(outputs, cfg):
+	try:
+		args = ['xrandr']
+		for name, info in outputs.items():
+			outsig = "%s=%s" % (name, randr.output_id(info))
+			args.append('--output')
+			args.append(name)
+			if outsig in cfg:
+				args.extend(shlex.split(cfg[outsig]))
+			else:
+				args.append('--off')
+
+		cmd = ' '.join(shlex.quote(x) for x in args)
+		print(cmd)
+		subprocess.check_call(args)
+		print('xrandr succeeded')
+		return True
+	except subprocess.CalledProcessError:
+		print('command failed: ' + cmd)
+		return False
+
+def rerandr(display):
+	outputs = randr.get_outputs()
+	signature = randr.get_signature(outputs)
+
+	for name, cfg in display.items():
+		if ",".join(sorted(cfg.keys())) == signature:
+			print("display mode: %s" % name)
+
+			set_randr(outputs, cfg)
+
+			return True
+
+	print("no display mode matched signature %s" % signature)
+	return False
 
 def main():
 	config = get_config()
 
-	set_rate(config['rate'])
-	set_xkbmap(config['xkbmap'])
+	keyboard = config.get('keyboard')
+	display = config.get('display')
+
+	if keyboard:
+		set_rate(keyboard['rate'])
+		set_xkbmap(keyboard['xkbmap'])
+
+	if display:
+		rerandr(display)
 
 	while True:
 		try:
@@ -130,8 +175,9 @@ def main():
 						device.sys_path,
 					))
 					time.sleep(2)
-					set_rate(config['rate'])
-					set_xkbmap(config['xkbmap'])
+					if keyboard:
+						set_rate(keyboard['rate'])
+						set_xkbmap(keyboard['xkbmap'])
 
 				if action == 'add' and device.subsystem == 'block':
 					fsinfo = get_fs_info(device)
@@ -150,6 +196,10 @@ def main():
 							device.get('DEVPATH'),
 						))
 						mount(devname)
+
+				if action == 'change' and device.subsystem == 'drm':
+					if display:
+						rerandr(display)
 
 		except KeyboardInterrupt:
 			print("dying")

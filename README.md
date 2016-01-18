@@ -5,13 +5,14 @@ These daemons will wait for new devices attached and set different things for th
 ## what they can do now
   1. Set up `xkbmap` and `rate` for keyboards on plug.
   1. Mount usb storage on plug.
+  1. Reconfigure `randr` when you plug/unplug your monitors.
 
 ## what we plan to teach them to do
-  1. Reconfigure `randr` when you plug/unplug your monitors.
   1. Run custom scripts on events.
 
 ## configuration
   1. Copy `.wftbrain.json.example` into `~/.wtfbrain.json`.
+	1. Launch `randr.py` to see the list of your currently attached monitors with their signatures.
   1. Change the settings as you wish.
 
 ## running
