@@ -16,4 +16,5 @@ These daemons will wait for new devices attached and set different things for th
   1. Change the settings as you wish.
 
 ## running
+  1. Install `pyudev` library.
   1. Launch `brain.py` and have fun.
