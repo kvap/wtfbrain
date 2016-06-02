@@ -15,7 +15,7 @@ import shlex
 import subprocess
 import time
 import json
-
+import logging
 import randr
 
 from datetime import datetime
@@ -28,6 +28,7 @@ monitor = pyudev.Monitor.from_netlink(context)
 monitor.filter_by(subsystem='input')
 monitor.filter_by(subsystem='block')
 monitor.filter_by(subsystem='drm')
+monitor.filter_by(subsystem='usb')
 
 
 def uniq_keyboard(device):
@@ -52,6 +53,10 @@ def notify(summary, body, timeout):
 			'-t', str(int(timeout * 1000)),
 		]
 		subprocess.check_call(args)
+
+
+def get_context(device):
+	return {key: value for key, value in device.items()}
 
 
 def get_fs_info(device):
@@ -149,6 +154,7 @@ def main():
 
 	keyboard = config.get('keyboard')
 	display = config.get('display')
+	usb_devices = config.get('usb')
 
 	if keyboard:
 		set_rate(keyboard['rate'])
@@ -215,11 +221,44 @@ def main():
 								config.get('notification', 0),
 							)
 
+				if action == 'add' and device.subsystem == 'usb':
+					context = get_context(device)
+					parts = device['PRODUCT'].split('/')
+					part1 = parts[0].zfill(4)
+					part2 = parts[1].zfill(4)
+					product_id = '%s:%s' % (part1, part2)
+					product_name = '%s %s' % (device.get('ID_VENDOR_FROM_DATABASE', ''),
+						device.get('ID_MODEL_FROM_DATABASE', ''))
+
+					print('usb: %s' % product_name)
+
+					if usb_devices and product_id in usb_devices:
+						conf = usb_devices[product_id]
+						actions = conf.get('actions')
+						if actions:
+							for name, cmd in actions:
+								try:
+									cmd = cmd % context
+								except KeyError:
+									#print("'%s' command can't be completed with %s" % (cmd, context))
+									continue
+
+								subprocess.run(cmd, shell=True,
+									stdin=None, stdout=None, stderr=None, close_fds=True)
+								print('usb:cmd', cmd)
+
+								notify(
+									'USB device command',
+									"'%s' command executed for %s" % (name, product_id),
+									config.get('notification', 0),
+								)
+
+
 		except KeyboardInterrupt:
 			print("dying")
 			return
-		except:
-			print("Recovering from interruption")
+		except Exception as e:
+			logging.error("Exception is occured", exc_info=1)
 
 
 if __name__ == '__main__':
