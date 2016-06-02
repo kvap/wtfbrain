@@ -6,6 +6,7 @@ These daemons will wait for new devices attached and set different things for th
   1. Set up `xkbmap` and `rate` for keyboards on plug.
   1. Mount usb storage on plug.
   1. Reconfigure `randr` when you plug/unplug your monitors.
+  1. Execute custom commands for usb device on plug
 
 ## what we plan to teach them to do
   1. Run custom scripts on events.
