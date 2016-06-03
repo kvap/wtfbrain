@@ -15,5 +15,12 @@
 			"LVDS1=LP125WH2-SLB1": "--preferred"
 		}
 	},
+	"usb": {
+		"05ac:12a8": {
+			"actions": [
+				["charge", "BUSNUM=%(BUSNUM)s DEVNUM=%(DEVNUM)s ipad_charge"],
+			]
+		}
+	},
 	"notification": 5
 }
