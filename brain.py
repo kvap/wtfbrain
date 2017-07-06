@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # -----------------------------------------------------------------------------
 # We wrote this file. As long as you retain this notice you can do whatever you
@@ -7,7 +7,7 @@
 #
 #	Constantin S. Pan <kvapen@gmail.com>
 #	Ildus Kurbangaliev <i.kurbangaliev@gmail.com>
-#	2016
+#	2015-2017
 # -----------------------------------------------------------------------------
 
 import pyudev
@@ -17,6 +17,9 @@ import time
 import json
 import logging
 import randr
+import os
+import shutil
+import tempfile
 
 from datetime import datetime
 from dateutil.tz import tzlocal
@@ -38,11 +41,10 @@ def uniq_keyboard(device):
 def isotime():
 	return datetime.now(tzlocal()).strftime("%F %T %Z")
 
-
 def get_config():
 	filename = expanduser("~/.wtfbrain.json")
 	with open(filename) as f:
-		config = json.load(f)
+		config = json.load(f, strict=False)
 	return config
 
 
@@ -66,6 +68,7 @@ def get_fs_info(device):
 		devname = device.get('DEVNAME')
 		return (label, fs, devname)
 
+
 def mount(block):
 	try:
 		args = [
@@ -80,20 +83,64 @@ def mount(block):
 		print('command failed: ' + cmd)
 		return False
 
-def set_xkbmap(xkbmap):
+
+def setup_xkb(xkbmap, xkb_symbols):
+	tmpdir = tempfile.mkdtemp()
+	symbols_dir = os.path.join(tmpdir, 'symbols')
+	os.mkdir(symbols_dir)
+
 	try:
+		ftmp = tempfile.NamedTemporaryFile(dir=symbols_dir, mode='w', delete=False)
+		if xkb_symbols:
+			for k, v in xkb_symbols.items():
+				ftmp.write('''xkb_symbols "%s_extra" {
+		%s
+	};'''% (k, "\n\t".join(v)))
+		ftmp.close()
+
 		args = ['setxkbmap']
 		for k, v in xkbmap.items():
+			if xkb_symbols and k == 'layout':
+				layouts = v.split(',')
+				for layout in layouts:
+					if layout in xkb_symbols:
+						v = v.replace(layout, '{0}+{1}({0}_extra)'
+								.format(layout, os.path.basename(ftmp.name)))
+
+			if k == 'option':
+				# clear any previous config
+				args.append("-option")
+				args.append('')
+
 			args.append("-" + k)
 			args.append(v)
-		cmd = ' '.join(shlex.quote(x) for x in args)
+
+		if xkb_symbols:
+			args.append('-print')
+			cmd = ' '.join(shlex.quote(x) for x in args)
+			p1 = subprocess.Popen(args, stdout=subprocess.PIPE)
+
+			args = ["xkbcomp",
+				"-I%s/.." % os.path.dirname(ftmp.name),
+				"-",
+				":0"]
+			cmd += ' | ' + ' '.join(shlex.quote(x) for x in args)
+			p2 = subprocess.Popen(args, stdin=p1.stdout)
+			p1.stdout.close()
+			out, err = p2.communicate()
+		else:
+			subprocess.check_call(args)
+			cmd = ' '.join(shlex.quote(x) for x in args)
+
 		print(cmd)
-		subprocess.check_call(args)
-		print('xkbmap set')
-		return True
+		print('xkb is up')
 	except subprocess.CalledProcessError:
-		print('command failed: ' + cmd)
+		print("xkb setup failed")
 		return False
+	finally:
+		shutil.rmtree(tmpdir)
+
+	return True
 
 
 def set_rate(rate):
@@ -112,6 +159,7 @@ def set_rate(rate):
 	except subprocess.CalledProcessError:
 		print('command failed: ' + cmd)
 		return False
+
 
 def set_randr(outputs, cfg):
 	try:
@@ -134,6 +182,7 @@ def set_randr(outputs, cfg):
 		print('command failed: ' + cmd)
 		return False
 
+
 def rerandr(display):
 	outputs = randr.get_outputs()
 	signature = randr.get_signature(outputs)
@@ -149,6 +198,7 @@ def rerandr(display):
 	print("no display mode matched signature %s" % signature)
 	return False, signature
 
+
 def main():
 	config = get_config()
 
@@ -158,7 +208,7 @@ def main():
 
 	if keyboard:
 		set_rate(keyboard['rate'])
-		set_xkbmap(keyboard['xkbmap'])
+		setup_xkb(keyboard['xkbmap'], keyboard.get('xkb_symbols'))
 
 	if display:
 		rerandr(display)
@@ -184,18 +234,17 @@ def main():
 					time.sleep(2)
 					if keyboard:
 						set_rate(keyboard['rate'])
-						set_xkbmap(keyboard['xkbmap'])
+						setup_xkb(keyboard['xkbmap'], keyboard['xkb_symbols'])
 
 				if action == 'add' and device.subsystem == 'block':
 					fsinfo = get_fs_info(device)
 					if fsinfo:
 						(label, fs, devname) = fsinfo
-						notify(
-							'A filesystem attached',
-							'{0} ({1}) at {2}'.format(label, fs, devname)
-							+ '\nMounting',
-							config.get('notification', 0),
-						)
+						notify('''A filesystem attached
+							{0} ({1}) at {2}\n
+							Mounting.'''.format(label, fs, devname),
+							config.get('notification', 0))
+
 						print("[{0}] {1}:{2} at {3}'".format(
 							isotime(),
 							device.get('ID_VENDOR', 'no-vendor'),
@@ -240,7 +289,7 @@ def main():
 								try:
 									cmd = cmd % context
 								except KeyError:
-									#print("'%s' command can't be completed with %s" % (cmd, context))
+									# print("'%s' command can't be completed with %s" % (cmd, context))
 									continue
 
 								subprocess.run(cmd, shell=True,
@@ -252,7 +301,6 @@ def main():
 									"'%s' command executed for %s" % (name, product_id),
 									config.get('notification', 0),
 								)
-
 
 		except KeyboardInterrupt:
 			print("dying")
