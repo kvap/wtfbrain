@@ -21,13 +21,13 @@ The default configuration doesn't contain keys remapping but `wtfbrain`
 supports them. To remap keys you can use `xkb_symbols` syntax. Add block
 like this to `keyboard` section:
 
-```
 	"xkb_symbols": {
-		"us": ["key <BKSP> {[	BackSpace,	Insert	]};",
+		"us": [
+			"key <BKSP> {[	BackSpace,	Insert	]};",
 			"key   <UP> {[	Up,			Prior	]};",
 			"key <DOWN> {[	Down,		Next	]};",
-    },
-```
+		]
+	}
 
 ## running
   1. Install `pyudev` library.
