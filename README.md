@@ -17,6 +17,18 @@ These daemons will wait for new devices attached and set different things for th
   1. Change the settings as you wish.
   1. Set "notification" to your preferred timeout in seconds. Zero disables them.
 
+The default configuration doesn't contain keys remapping but `wtfbrain`
+supports them. To remap keys you can use `xkb_symbols` syntax. Add block
+like this to `keyboard` section:
+
+```
+	"xkb_symbols": {
+		"us": ["key <BKSP> {[	BackSpace,	Insert	]};",
+			"key   <UP> {[	Up,			Prior	]};",
+			"key <DOWN> {[	Down,		Next	]};",
+    },
+```
+
 ## running
   1. Install `pyudev` library.
   1. Launch `brain.py` and have fun.
