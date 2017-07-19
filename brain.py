@@ -240,7 +240,7 @@ def main():
 					fsinfo = get_fs_info(device)
 					if fsinfo:
 						(label, fs, devname) = fsinfo
-						notify('''A filesystem attached
+						notify('New usb device', '''A filesystem attached
 							{0} ({1}) at {2}\n
 							Mounting.'''.format(label, fs, devname),
 							config.get('notification', 0))
