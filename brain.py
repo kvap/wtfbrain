@@ -234,7 +234,7 @@ def main():
 					time.sleep(2)
 					if keyboard:
 						set_rate(keyboard['rate'])
-						setup_xkb(keyboard['xkbmap'], keyboard['xkb_symbols'])
+						setup_xkb(keyboard['xkbmap'], keyboard.get('xkb_symbols'))
 
 				if action == 'add' and device.subsystem == 'block':
 					fsinfo = get_fs_info(device)
