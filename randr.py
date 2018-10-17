@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 
+
 def get_outputs():
 	outputs = {}
 	oname = None
@@ -34,6 +35,7 @@ def get_outputs():
 				continue
 	return outputs
 
+
 def parse_edid(edid):
 	name = None
 	serial = None
@@ -41,13 +43,14 @@ def parse_edid(edid):
 	for descr in edid[54:72],edid[72:90],edid[90:108],edid[108:126]:
 		if descr[:3] == b'\x00\x00\x00':
 			if descr[3] == 0xff: # serial
-				serial = descr[5:].decode().strip()
+				serial = descr[5:].decode(errors='ignore').strip()
 			elif descr[3] == 0xfe: # text
-				text = descr[5:].decode().strip()
+				text = descr[5:].decode(errors='ignore').strip()
 			elif descr[3] == 0xfc: # name
-				name = descr[5:].decode().strip()
+				name = descr[5:].decode(errors='ignore').strip()
 
 	return name, serial, text
+
 
 def unnonify(*args):
 	if args:
@@ -60,9 +63,11 @@ def unnonify(*args):
 	else:
 		return []
 
+
 def output_id(info):
 	name, serial, text = parse_edid(info['edid'])
 	return ":".join(unnonify(name, serial, text)).replace(' ','-')
+
 
 def get_signature(outputs):
 	signatures = []
@@ -72,11 +77,13 @@ def get_signature(outputs):
 		signatures.append("%s=%s" % (name, output_id(info)))
 	return ",".join(signatures)
 
+
 def main():
 	for name, info in sorted(get_outputs().items()):
 		if info['status'] != 'connected':
 			continue
 		print("%s=%s" % (name, output_id(info)))
+
 
 if __name__ == '__main__':
 	main()
