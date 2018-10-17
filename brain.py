@@ -41,6 +41,7 @@ def uniq_keyboard(device):
 def isotime():
 	return datetime.now(tzlocal()).strftime("%F %T %Z")
 
+
 def get_config():
 	filename = expanduser("~/.wtfbrain.json")
 	with open(filename) as f:
