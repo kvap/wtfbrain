@@ -53,37 +53,38 @@ def parse_edid(edid):
 
 
 def unnonify(*args):
-	if args:
-		head = args[0]
-		tail = unnonify(*args[1:])
-		if head is None:
-			return tail
-		else:
-			return [head] + tail
-	else:
-		return []
-
+        return list(filter(None, args))
 
 def output_id(info):
 	name, serial, text = parse_edid(info['edid'])
 	return ":".join(unnonify(name, serial, text)).replace(' ','-')
 
-
 def get_signature(outputs):
-	signatures = []
-	for name, info in sorted(outputs.items()):
-		if info['status'] != 'connected':
-			continue
-		signatures.append("%s=%s" % (name, output_id(info)))
-	return ",".join(signatures)
+        return [(name, output_id(info)) for (name, info) in outputs.items() if info['status'] == 'connected']
 
+def match(config, signature):
+    if len(config) != len(signature):
+        return None
+
+    result = []
+    for (candidate, settings), (output_name, output_id) in zip(config.items(), signature):
+        if "=" in candidate:
+            name, id = candidate.split("=", 1)
+        else:
+            name, id = None, candidate
+
+        if name and name != output_name or id != output_id:
+            return None
+
+        result.append((output_name, settings))
+
+    return result
 
 def main():
 	for name, info in sorted(get_outputs().items()):
 		if info['status'] != 'connected':
 			continue
 		print("%s=%s" % (name, output_id(info)))
-
 
 if __name__ == '__main__':
 	main()

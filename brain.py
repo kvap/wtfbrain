@@ -35,8 +35,7 @@ monitor.filter_by(subsystem='usb')
 
 
 def uniq_keyboard(device):
-	return device.get('ID_INPUT_KEYBOARD') == '1' and device.get('UNIQ') == '""'
-
+	return device.get('ID_INPUT_KEYBOARD') == '1' and 'LIBINPUT_DEVICE_GROUP' in device
 
 def isotime():
 	return datetime.now(tzlocal()).strftime("%F %T %Z")
@@ -165,12 +164,12 @@ def set_rate(rate):
 def set_randr(outputs, cfg):
 	try:
 		args = ['xrandr']
+		cfgmap = dict(cfg)
 		for name, info in outputs.items():
-			outsig = "%s=%s" % (name, randr.output_id(info))
 			args.append('--output')
 			args.append(name)
-			if outsig in cfg:
-				args.extend(shlex.split(cfg[outsig]))
+			if name in cfgmap:
+				args.extend(shlex.split(cfgmap[name]))
 			else:
 				args.append('--off')
 
@@ -189,12 +188,13 @@ def rerandr(display):
 	signature = randr.get_signature(outputs)
 
 	for name, cfg in display.items():
-		if ",".join(sorted(cfg.keys())) == signature:
-			print("display mode: %s" % name)
+            matched_cfg = randr.match(cfg, signature)
+            if matched_cfg:
+                print("display mode: %s" % name)
 
-			set_randr(outputs, cfg)
+                set_randr(outputs, matched_cfg)
 
-			return True, name
+                return True, name
 
 	print("no display mode matched signature %s" % signature)
 	return False, signature
